@@ -112,6 +112,7 @@ input[type=color]{width:28px;height:28px;border-radius:50%;border:.5px solid var
 .notes-wrap label{font-size:12px;color:var(--txt2);font-weight:500;display:block;margin-bottom:6px}
 .notes-wrap textarea{width:100%;background:none;border:none;font-size:14px;color:var(--txt);resize:none;outline:none;font-family:inherit;min-height:110px;line-height:1.6}
 .edit-btn{margin:4px 16px 0;width:calc(100% - 32px);padding:13px;border-radius:var(--radius);border:.5px solid var(--border2);background:none;cursor:pointer;font-size:15px;color:var(--txt);display:flex;align-items:center;justify-content:center;gap:6px}
+.maps-btn{margin:8px 16px 0;width:calc(100% - 32px);padding:13px;border-radius:var(--radius);border:none;background:#1D9E75;cursor:pointer;font-size:15px;font-weight:600;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
 </style>
 </head>
 <body>
@@ -144,6 +145,7 @@ input[type=color]{width:28px;height:28px;border-radius:50%;border:.5px solid var
       <div class="field"><label>Nombre</label><input id="f-name" type="text" placeholder="Ej: Vuelo a Roma"></div>
       <div class="field"><label>Detalle 1</label><input id="f-detail" type="text" placeholder="Ej: Terminal 2, puerta B7"></div>
       <div class="field"><label>Detalle 2</label><input id="f-detail2" type="text" placeholder="Ej: Recoger equipaje en cinta 4"></div>
+      <div class="field"><label><i class="ti ti-map-pin" style="font-size:13px"></i> Google Maps URL</label><input id="f-maps" type="url" placeholder="https://maps.google.com/..."></div>
       <div class="row2">
         <div class="field"><label>Hora inicio</label><input id="f-start" type="time" value="09:00"></div>
         <div class="field"><label>Hora fin</label><input id="f-end" type="time" value="10:00"></div>
@@ -218,6 +220,7 @@ input[type=color]{width:28px;height:28px;border-radius:50%;border:.5px solid var
       <textarea id="dv-notes" placeholder="Escribe notas, direcciones, recordatorios…" oninput="saveNotes()"></textarea>
     </div>
   </div>
+  <a id="maps-btn" class="maps-btn" target="_blank" style="display:none"><i class="ti ti-map-pin"></i> Google Maps</a>
   <button class="edit-btn" onclick="editCurrent()"><i class="ti ti-edit"></i> Editar evento</button>
 </div>
 
@@ -508,6 +511,7 @@ function openNew(dayId){
   document.getElementById('f-name').value='';
   document.getElementById('f-detail').value='';
   document.getElementById('f-detail2').value='';
+  document.getElementById('f-maps').value='';
   document.getElementById('f-start').value='09:00';
   document.getElementById('f-end').value='10:00';
   document.getElementById('f-price').value='';
@@ -525,6 +529,7 @@ function openEdit(evId){
   document.getElementById('f-name').value=ev.name;
   document.getElementById('f-detail').value=ev.detail||'';
   document.getElementById('f-detail2').value=ev.detail2||'';
+  document.getElementById('f-maps').value=ev.maps||'';
   document.getElementById('f-start').value=ev.start;
   document.getElementById('f-end').value=ev.end;
   document.getElementById('f-price').value=ev.price||'';
@@ -542,6 +547,7 @@ function saveEvent(){
   const ev={id:editingId||'e'+Date.now(),name,
     detail:document.getElementById('f-detail').value,
     detail2:document.getElementById('f-detail2').value,
+    maps:document.getElementById('f-maps').value.trim(),
     start:document.getElementById('f-start').value,
     end:document.getElementById('f-end').value,
     price:parseFloat(document.getElementById('f-price').value)||0,
@@ -595,6 +601,9 @@ function openDetail(evId){
   document.getElementById('dv-detail2-txt').textContent=ev.detail2||'';
   document.getElementById('dv-detail2-row').style.display=ev.detail2?'flex':'none';
   document.getElementById('dv-notes').value=ev.notes||'';
+  const mapsBtn = document.getElementById('maps-btn');
+  if (ev.maps) { mapsBtn.href = ev.maps; mapsBtn.style.display = 'flex'; }
+  else { mapsBtn.style.display = 'none'; }
   document.getElementById('detail-view').classList.add('open');
 }
 function closeDetail(){document.getElementById('detail-view').classList.remove('open');currentDetailId=null}
