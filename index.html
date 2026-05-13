@@ -270,36 +270,94 @@ const CUR_SYM={EUR:'€',JPY:'¥'};
 let days = DEFAULT_DAYS;
 let selColor=COLORS[0],selIcon=ICONS[0],editingId=null,editingDayId=null,currentDetailId=null,activeDayId=null;
 let loaded = false;
+let isOnline = navigator.onLine;
+let pendingSync = false;
+
+const LOCAL_KEY = 'viaje_cache';
+
+function setIndicator(text, color, autohide=true) {
+  const ind = document.getElementById('sync-indicator');
+  if (!ind) return;
+  ind.textContent = text;
+  ind.style.color = color;
+  if (autohide) setTimeout(() => ind.textContent = '', 2000);
+}
+
+function saveLocal() {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(days));
+}
+
+function loadLocal() {
+  const raw = localStorage.getItem(LOCAL_KEY);
+  if (!raw) return false;
+  try { days = JSON.parse(raw); return true; } catch { return false; }
+}
+
+function normalizeDays(data) {
+  const raw = Array.isArray(data) ? data : Object.values(data);
+  return raw.filter(Boolean).map(d => ({
+    ...d,
+    events: d.events
+      ? (Array.isArray(d.events) ? d.events : Object.values(d.events)).filter(Boolean)
+      : []
+  }));
+}
+
+// Arrancar offline si no hay conexión
+if (!isOnline) {
+  const ok = loadLocal();
+  days = ok ? days : DEFAULT_DAYS;
+  loaded = true;
+  activeDayId = days[0]?.id || 1;
+  document.addEventListener('DOMContentLoaded', () => {
+    render();
+    setIndicator('📵 Sin conexión', '#D85A30', false);
+  });
+}
 
 // Escuchar cambios en Firebase en tiempo real
 onValue(dbRef, (snapshot) => {
+  if (!isOnline) return;
   const data = snapshot.val();
   if (data) {
-    // Firebase puede devolver objetos en vez de arrays — normalizamos
-    const raw = Array.isArray(data) ? data : Object.values(data);
-    days = raw.filter(Boolean).map(d => ({
-      ...d,
-      events: d.events
-        ? (Array.isArray(d.events) ? d.events : Object.values(d.events)).filter(Boolean)
-        : []
-    }));
+    days = normalizeDays(data);
+    saveLocal();
   }
   if (!loaded) {
     loaded = true;
     activeDayId = days[0]?.id || 1;
     render();
-    const ind = document.getElementById('sync-indicator');
-    if (ind) { ind.textContent = '☁️ Conectado'; ind.style.color = '#1D9E75'; setTimeout(()=>ind.textContent='', 2000); }
+    setIndicator('☁️ Conectado', '#1D9E75');
   } else {
     render();
   }
 });
 
 function save() {
-  set(dbRef, days);
-  const ind = document.getElementById('sync-indicator');
-  if (ind) { ind.textContent = '☁️ Guardado'; ind.style.color = '#1D9E75'; setTimeout(()=>ind.textContent='', 1500); }
+  saveLocal(); // siempre guarda local
+  if (isOnline) {
+    set(dbRef, days);
+    setIndicator('☁️ Guardado', '#1D9E75');
+  } else {
+    pendingSync = true;
+    setIndicator('💾 Guardado local', '#D85A30', false);
+  }
 }
+
+// Detectar cambios de conexión
+window.addEventListener('online', () => {
+  isOnline = true;
+  setIndicator('☁️ Conectado', '#1D9E75');
+  if (pendingSync) {
+    set(dbRef, days);
+    pendingSync = false;
+    setIndicator('☁️ Sincronizado', '#1D9E75');
+  }
+});
+window.addEventListener('offline', () => {
+  isOnline = false;
+  setIndicator('📵 Sin conexión', '#D85A30', false);
+});
 
 function fmtPrice(price,currency){
   const p=parseFloat(price)||0;
@@ -563,6 +621,10 @@ window.saveNotes=saveNotes;
 window.editCurrent=editCurrent;
 
 // activeDayId y render() los lanza onValue cuando carga Firebase
+// Registrar Service Worker para funcionamiento offline
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/mi-viaje/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
