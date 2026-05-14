@@ -1,4 +1,4 @@
-const CACHE = 'viaje-v1';
+const CACHE = 'viaje-v2';
 const ASSETS = [
   '/mi-viaje/',
   '/mi-viaje/index.html',
